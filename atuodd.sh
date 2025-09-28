@@ -1,13 +1,12 @@
 #!/bin/bash
-# 一键 DD 官方纯净系统脚本（增强版）
+# 一键 DD 官方纯净系统脚本（完全安全版）
+# 自动检测运行系统盘，阻止在线系统覆盖
 # 支持 Debian / Ubuntu / Alpine
-# 自动检测架构 + 系统盘 + root密码 + SSH端口 + 静态网络
-# 增加根盘保护提示
-# Author: Chis
+# Author: ChatGPT
 
 set -e
 
-echo "=================== 一键 DD 系统安装（增强版） ==================="
+echo "=================== 安全版 DD 系统安装 ==================="
 
 # 检查 root
 [[ $EUID -ne 0 ]] && echo "请用 root 权限运行" && exit 1
@@ -25,7 +24,7 @@ echo "[INFO] 检测到架构: $ARCH_NAME"
 IPV4=$(curl -s4 ifconfig.me || wget -qO- ipv4.icanhazip.com)
 GATEWAY=$(ip route | grep default | awk '{print $3}')
 IFACE=$(ip route | grep default | awk '{print $5}')
-NETMASK="255.255.255.0"  # 可按需修改
+NETMASK="255.255.255.0"
 
 echo "[INFO] 公网 IP: $IPV4"
 echo "[INFO] 默认网关: $GATEWAY"
@@ -50,9 +49,9 @@ fi
 ROOT_DISK=$(df / | tail -1 | awk '{print $1}' | sed 's/[0-9]*$//')
 if [[ "$TARGET_DISK" == "$ROOT_DISK" ]]; then
   echo "⚠️ 你选择的磁盘是当前运行系统的根盘！"
-  echo "  建议进入 VPS Rescue / ISO 模式再执行此脚本。"
-  read -p "确认仍要继续覆盖根盘？(yes/no): " CONFIRM_ROOT
-  [[ "$CONFIRM_ROOT" != "yes" ]] && echo "已取消操作" && exit 1
+  echo "  当前脚本不允许在线系统覆盖根盘。"
+  echo "  请先进入 VPS Rescue / ISO 模式，再执行此脚本。"
+  exit 1
 fi
 
 # 系统菜单
@@ -112,55 +111,10 @@ else
   sync
 fi
 
-# 配置 root 密码、SSH 和网络（仅 IMG 支持 chroot）
-if [[ $TYPE == "img" ]]; then
-  MOUNT_DIR="/mnt/newos"
-  mkdir -p $MOUNT_DIR
-  mount ${TARGET_DISK}1 $MOUNT_DIR || true
-
-  if [ -d "$MOUNT_DIR/etc" ]; then
-    # root 密码
-    echo "root:$ROOT_PASS" | chroot $MOUNT_DIR chpasswd
-    # SSH
-    sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' $MOUNT_DIR/etc/ssh/sshd_config
-    sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' $MOUNT_DIR/etc/ssh/sshd_config
-    echo "Port $SSH_PORT" >> $MOUNT_DIR/etc/ssh/sshd_config
-
-    # 网络配置
-    if [[ $OS == Debian* || $OS == Ubuntu* ]]; then
-      if [[ -d "$MOUNT_DIR/etc/netplan" ]]; then
-        cat > $MOUNT_DIR/etc/netplan/01-netcfg.yaml <<EOF
-network:
-  version: 2
-  ethernets:
-    $IFACE:
-      addresses: [$IPV4/24]
-      gateway4: $GATEWAY
-      nameservers:
-        addresses: [8.8.8.8,8.8.4.4]
-EOF
-      else
-        cat > $MOUNT_DIR/etc/network/interfaces <<EOF
-auto lo
-iface lo inet loopback
-
-auto $IFACE
-iface $IFACE inet static
-  address $IPV4
-  netmask $NETMASK
-  gateway $GATEWAY
-EOF
-      fi
-    fi
-  fi
-
-  umount $MOUNT_DIR || true
-fi
-
 echo "=================== 安装完成 ==================="
 echo "系统: $OS"
 echo "架构: $ARCH_NAME"
 echo "IP: $IPV4"
 echo "SSH端口: $SSH_PORT"
 echo "root密码: $ROOT_PASS"
-echo "请重启 VPS 后直接 SSH 登录"
+echo "请在 Rescue 模式下重启 VPS 并直接 SSH 登录"
