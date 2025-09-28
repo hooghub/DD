@@ -1,4 +1,3 @@
-```bash
 #!/bin/bash
 # 一键 DD 官方纯净系统脚本（实用版）
 # 支持 Debian / Ubuntu / Alpine
@@ -152,4 +151,3 @@ echo "IP: $IPV4"
 echo "SSH端口: $SSH_PORT"
 echo "root密码: $ROOT_PASS"
 echo "请重启 VPS 后直接 SSH 登录"
-```
