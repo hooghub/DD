@@ -1,12 +1,12 @@
 #!/bin/bash
-# 一键 DD 官方纯净系统脚本（实用版）
+# 一键 DD 官方纯净系统脚本（优化版）
 # 支持 Debian / Ubuntu / Alpine
 # 自动检测架构 + 系统盘 + root密码 + SSH端口 + 静态网络
-# Author: Chis
+# Author: ChatGPT
 
 set -e
 
-echo "=================== 一键 DD 系统安装（实用版） ==================="
+echo "=================== 一键 DD 系统安装（优化版） ==================="
 
 # 检查 root
 [[ $EUID -ne 0 ]] && echo "请用 root 权限运行" && exit 1
@@ -46,13 +46,15 @@ else
 fi
 
 # 系统菜单
-echo "请选择要安装的系统:"
-echo "1) Debian 11 (Bullseye)"
-echo "2) Debian 12 (Bookworm)"
-echo "3) Ubuntu 20.04 (Focal LTS)"
-echo "4) Ubuntu 22.04 (Jammy LTS)"
-echo "5) Ubuntu 24.04 (Noble LTS)"
-echo "6) Alpine Linux (最新稳定版)"
+echo "请选择要安装的系统（输入编号后回车）:"
+echo "------------------------------------------------"
+echo "  1) Debian 11 (Bullseye)"
+echo "  2) Debian 12 (Bookworm)"
+echo "  3) Ubuntu 20.04 (Focal LTS)"
+echo "  4) Ubuntu 22.04 (Jammy LTS)"
+echo "  5) Ubuntu 24.04 (Noble LTS)"
+echo "  6) Alpine Linux (最新稳定版)"
+echo "------------------------------------------------"
 read -p "请输入编号: " OS_CHOICE
 
 case $OS_CHOICE in
@@ -71,10 +73,12 @@ ROOT_PASS=${ROOT_PASS:-root@123}
 read -p "请输入 SSH 端口 (默认: 22): " SSH_PORT
 SSH_PORT=${SSH_PORT:-22}
 
+echo "------------------------------------------------"
 echo "[INFO] 系统: $OS"
 echo "[INFO] 镜像: $IMG_URL"
 echo "[INFO] root密码: $ROOT_PASS"
 echo "[INFO] SSH端口: $SSH_PORT"
+echo "------------------------------------------------"
 
 # 确认操作
 echo "⚠️ 注意: 此操作会清空 $TARGET_DISK 上的所有数据！"
@@ -114,7 +118,6 @@ if [[ $TYPE == "img" ]]; then
 
     # 网络配置
     if [[ $OS == Debian* || $OS == Ubuntu* ]]; then
-      # 尝试检测 netplan 或 /etc/network/interfaces
       if [[ -d "$MOUNT_DIR/etc/netplan" ]]; then
         cat > $MOUNT_DIR/etc/netplan/01-netcfg.yaml <<EOF
 network:
