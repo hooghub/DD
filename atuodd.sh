@@ -1,12 +1,12 @@
 #!/bin/bash
-# 一键 DD 官方纯净系统脚本（完全安全版）
-# 自动检测运行系统盘，阻止在线系统覆盖
+# 一键 DD 官方纯净系统脚本（非根盘安全版）
+# 自动检测根盘，禁止覆盖在线系统盘
 # 支持 Debian / Ubuntu / Alpine
-# Author: ChatGPT
+# Author: Chis
 
 set -e
 
-echo "=================== 安全版 DD 系统安装 ==================="
+echo "=================== 非根盘 DD 系统安装 ==================="
 
 # 检查 root
 [[ $EUID -ne 0 ]] && echo "请用 root 权限运行" && exit 1
@@ -20,7 +20,7 @@ case "$ARCH" in
 esac
 echo "[INFO] 检测到架构: $ARCH_NAME"
 
-# 获取公网 IP、网关、网卡
+# 获取网络信息
 IPV4=$(curl -s4 ifconfig.me || wget -qO- ipv4.icanhazip.com)
 GATEWAY=$(ip route | grep default | awk '{print $3}')
 IFACE=$(ip route | grep default | awk '{print $5}')
@@ -31,27 +31,29 @@ echo "[INFO] 默认网关: $GATEWAY"
 echo "[INFO] 网卡接口: $IFACE"
 
 # 检测磁盘
-DISKS=($(lsblk -dpno NAME | grep -E "/dev/(sd|vd|nvme)"))
-if [[ ${#DISKS[@]} -eq 0 ]]; then
-  echo "未检测到可用磁盘" && exit 1
-elif [[ ${#DISKS[@]} -eq 1 ]]; then
-  TARGET_DISK="${DISKS[0]}"
-  echo "[INFO] 自动选择系统盘: $TARGET_DISK"
+ROOT_DISK=$(df / | tail -1 | awk '{print $1}' | sed 's/[0-9]*$//')
+
+# 可用磁盘 = 非根盘
+AVAILABLE_DISKS=()
+for d in $(lsblk -dpno NAME | grep -E "/dev/(sd|vd|nvme)"); do
+  [[ "$d" != "$ROOT_DISK" ]] && AVAILABLE_DISKS+=("$d")
+done
+
+if [[ ${#AVAILABLE_DISKS[@]} -eq 0 ]]; then
+  echo "⚠️ 没有非根盘可写入 DD，无法继续！"
+  exit 1
+fi
+
+# 选择磁盘
+if [[ ${#AVAILABLE_DISKS[@]} -eq 1 ]]; then
+  TARGET_DISK="${AVAILABLE_DISKS[0]}"
+  echo "[INFO] 自动选择非根盘: $TARGET_DISK"
 else
-  echo "检测到多块磁盘，请选择系统盘:"
-  select d in "${DISKS[@]}"; do
+  echo "检测到多块非根盘，请选择目标磁盘:"
+  select d in "${AVAILABLE_DISKS[@]}"; do
     TARGET_DISK="$d"
     break
   done
-fi
-
-# 检测是否选择了当前根盘
-ROOT_DISK=$(df / | tail -1 | awk '{print $1}' | sed 's/[0-9]*$//')
-if [[ "$TARGET_DISK" == "$ROOT_DISK" ]]; then
-  echo "⚠️ 你选择的磁盘是当前运行系统的根盘！"
-  echo "  当前脚本不允许在线系统覆盖根盘。"
-  echo "  请先进入 VPS Rescue / ISO 模式，再执行此脚本。"
-  exit 1
 fi
 
 # 系统菜单
@@ -87,6 +89,7 @@ echo "[INFO] 系统: $OS"
 echo "[INFO] 镜像: $IMG_URL"
 echo "[INFO] root密码: $ROOT_PASS"
 echo "[INFO] SSH端口: $SSH_PORT"
+echo "[INFO] 目标磁盘: $TARGET_DISK"
 echo "------------------------------------------------"
 
 # 确认操作
@@ -117,4 +120,5 @@ echo "架构: $ARCH_NAME"
 echo "IP: $IPV4"
 echo "SSH端口: $SSH_PORT"
 echo "root密码: $ROOT_PASS"
-echo "请在 Rescue 模式下重启 VPS 并直接 SSH 登录"
+echo "目标磁盘: $TARGET_DISK"
+echo "可直接挂载或启动该磁盘，无需 Rescue 模式"
