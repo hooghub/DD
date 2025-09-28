@@ -2,7 +2,7 @@
 # 一键 DD 官方纯净系统脚本（实用版）
 # 支持 Debian / Ubuntu / Alpine
 # 自动检测架构 + 系统盘 + root密码 + SSH端口 + 静态网络
-# Author: ChatGPT
+# Author: Chis
 
 set -e
 
