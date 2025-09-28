@@ -1,12 +1,13 @@
 #!/bin/bash
-# 一键 DD 官方纯净系统脚本（优化版）
+# 一键 DD 官方纯净系统脚本（增强版）
 # 支持 Debian / Ubuntu / Alpine
 # 自动检测架构 + 系统盘 + root密码 + SSH端口 + 静态网络
-# Author: ChatGPT
+# 增加根盘保护提示
+# Author: Chis
 
 set -e
 
-echo "=================== 一键 DD 系统安装（优化版） ==================="
+echo "=================== 一键 DD 系统安装（增强版） ==================="
 
 # 检查 root
 [[ $EUID -ne 0 ]] && echo "请用 root 权限运行" && exit 1
@@ -43,6 +44,15 @@ else
     TARGET_DISK="$d"
     break
   done
+fi
+
+# 检测是否选择了当前根盘
+ROOT_DISK=$(df / | tail -1 | awk '{print $1}' | sed 's/[0-9]*$//')
+if [[ "$TARGET_DISK" == "$ROOT_DISK" ]]; then
+  echo "⚠️ 你选择的磁盘是当前运行系统的根盘！"
+  echo "  建议进入 VPS Rescue / ISO 模式再执行此脚本。"
+  read -p "确认仍要继续覆盖根盘？(yes/no): " CONFIRM_ROOT
+  [[ "$CONFIRM_ROOT" != "yes" ]] && echo "已取消操作" && exit 1
 fi
 
 # 系统菜单
